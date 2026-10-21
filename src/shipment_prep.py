@@ -10,3 +10,17 @@ FEATURES = [
     "label_print_batch", "scanner_build_no", "tape_roll_no", "sticker_serial_mod", "shelf_slot_no",
 ]
 NOISE_COLUMNS = ["label_print_batch", "scanner_build_no", "tape_roll_no", "sticker_serial_mod", "shelf_slot_no"]
+
+
+
+# Function created "clean_shipments":
+def clean_shipments(raw, medians= None):
+
+    # Removing the duplicated row by using ".drop_duplicates()" function and ".copy()" function to copy the data and allocate new memory which prevents the "SettingWithCopyWarning".
+    clean_df= raw.drop_duplicates().copy()
+
+    # Standardizing column "service_type" into exactly clean categories (Express, Standard, Economy).
+    clean_df['service_type']= clean_df['service_type'].str.strip().str.title()
+
+    return (clean_df, medians)     
+ 
