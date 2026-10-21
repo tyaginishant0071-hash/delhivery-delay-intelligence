@@ -22,5 +22,33 @@ def clean_shipments(raw, medians= None):
     # Standardizing column "service_type" into exactly clean categories (Express, Standard, Economy).
     clean_df['service_type']= clean_df['service_type'].str.strip().str.title()
 
-    return (clean_df, medians)     
- 
+    # Replacing a missing value with the placeholder "Unknown" in "payment_mode" column.
+    clean_df['payment_mode']= clean_df['payment_mode'].fillna("Unknown")
+
+    # Removing the rupee sign and the thousands commas, convert to a number, store it in a new column declared_value_inr, and drop the text column:
+    clean_df['declared_value_inr']= clean_df['declared_value'].str.replace('[₹,]', '', regex= True).astype(float)
+    clean_df.drop(columns= ['declared_value'], inplace= True)
+
+    # "dispatch_time" Converting to a datetime:
+    clean_df['dispatch_time']= pd.to_datetime(clean_df['dispatch_time'], errors= 'coerce')
+
+    # parcel_weight_kg: Any value above 100 is a scanner-fault sentinel (the network accepts parcels up to 40 kg) — treat it as missing:
+    clean_df['parcel_weight_kg']= clean_df['parcel_weight_kg'].mask(clean_df['parcel_weight_kg'] > 100)      # Replace values >= 100 with NaN
+
+    # Fill median in missing data points in columns with there column median: ("distance_km, parcel_weight_kg and declared_value_inr"):
+    cols = ['distance_km', 'parcel_weight_kg', 'declared_value_inr']
+
+    # If medians is None, compute them from the current data
+    if medians is None:
+        medians = {
+            'distance_km': round(float(clean_df['distance_km'].median()), 4),
+            'parcel_weight_kg': round(float(clean_df['parcel_weight_kg'].median()), 4),
+            'declared_value_inr': round(float(clean_df['declared_value_inr'].median()), 4)
+        }
+    
+    # Filling missing values using the dictionary
+    clean_df[cols]= clean_df[cols].fillna(medians)
+
+    return clean_df, medians     
+
+# Function created "build_features":
