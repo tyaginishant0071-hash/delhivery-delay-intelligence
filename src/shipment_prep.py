@@ -33,7 +33,7 @@ def clean_shipments(raw, medians= None):
     clean_df['dispatch_time']= pd.to_datetime(clean_df['dispatch_time'], errors= 'coerce')
 
     # parcel_weight_kg: Any value above 100 is a scanner-fault sentinel (the network accepts parcels up to 40 kg) — treat it as missing:
-    clean_df['parcel_weight_kg']= clean_df['parcel_weight_kg'].mask(clean_df['parcel_weight_kg'] > 100)      # Replace values >= 100 with NaN
+    clean_df['parcel_weight_kg']= clean_df['parcel_weight_kg'].mask(clean_df['parcel_weight_kg'] > 100)      # Replace values > 100 with NaN
 
     # Fill median in missing data points in columns with there column median: ("distance_km, parcel_weight_kg and declared_value_inr"):
     cols = ['distance_km', 'parcel_weight_kg', 'declared_value_inr']
@@ -52,3 +52,13 @@ def clean_shipments(raw, medians= None):
     return clean_df, medians     
 
 # Function created "build_features":
+def build_features(clean, hubs):
+
+    # # Merge clean_data with hub_df (merge_how= 'left'):
+    clean= pd.merge(left= clean, right= hubs, on= 'hub_id',how= 'left')
+
+    # Add promised_hours to the returned DataFrame. For each shipment, use its service_type to look up the promise time from the existing PROMISED_HOURS dictionary:
+    clean['promised_hours'] = clean['service_type'].map(PROMISED_HOURS)
+
+
+    return clean
