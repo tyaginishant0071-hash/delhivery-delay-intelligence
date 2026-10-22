@@ -41,9 +41,9 @@ def clean_shipments(raw, medians= None):
     # If medians is None, compute them from the current data
     if medians is None:
         medians = {
-            'distance_km': round(float(clean_df['distance_km'].median()), 4),
-            'parcel_weight_kg': round(float(clean_df['parcel_weight_kg'].median()), 4),
-            'declared_value_inr': round(float(clean_df['declared_value_inr'].median()), 4)
+            'distance_km': float(clean_df['distance_km'].median()),
+            'parcel_weight_kg': float(clean_df['parcel_weight_kg'].median()),
+            'declared_value_inr': float(clean_df['declared_value_inr'].median())
         }
     
     # Filling missing values using the dictionary
@@ -60,5 +60,16 @@ def build_features(clean, hubs):
     # Add promised_hours to the returned DataFrame. For each shipment, use its service_type to look up the promise time from the existing PROMISED_HOURS dictionary:
     clean['promised_hours'] = clean['service_type'].map(PROMISED_HOURS)
 
+    # Add is_cod to the returned DataFrame. For each shipment, use its payment_mode(1= COD, 0= Prepaid and Unknown):
+    clean['is_cod'] = (clean['payment_mode'] == 'COD').astype(int)
+
+    # Add is_weekend to the returned DataFrame. For each shipment, use its dispatch_time (Saturday or Sunday= 1 and Monday through Friday= 0):
+    clean['is_weekend'] = clean['dispatch_time'].dt.dayofweek.isin([5, 6]).astype(int)
+
+    # Add dispatch_hour by taking the hour from each shipment’s dispatch_time and ignoring the minutes:
+    clean['dispatch_hour']= clean['dispatch_time'].dt.hour
+
+    # Add "log_declared_value" by taking the natural logarithm of "declared_value_inr" for each shipment:
+    clean['log_declared_value']= np.log(clean['declared_value_inr'])
 
     return clean
