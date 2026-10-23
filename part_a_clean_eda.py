@@ -1,6 +1,9 @@
 import pandas as pd
 import os
 
+os.makedirs('outputs', exist_ok= True)
+
+
 from src.shipment_prep import clean_shipments, build_features, FEATURES
 
 raw= pd.read_csv("data/raw_shipments.csv")
@@ -77,15 +80,65 @@ checks_2= {
 
 print("Metric checks after cleaning:\n",checks_2)
 
-# Combine both dictionaries and convert to DataFrame in one go:
-checks_df= pd.DataFrame(list({**checks, **checks_2}.items()), columns= ['metric', 'value'])
+# Combine dictionaries:
+all_checks = {**checks, **checks_2}
 
-# Round any floating-point numbers automatically:
-checks_df['value']= checks_df['value'].round(4)
+# Round only the actual floating-point numbers
+rounded_checks= {}
+for name, value in all_checks.items():
+    if isinstance(value, float):
+        rounded_checks[name]= round(value, 4)
+    else:
+        rounded_checks[name]= int(value)
 
+# Converting dictionary into dataframe:
+checks_df= pd.DataFrame(list(rounded_checks.items()), columns= ['metric', 'value'], dtype= object)
 
-
-# Save the checks DataFrame to a CSV file:
-os.makedirs('outputs', exist_ok= True)
+# Save to CSV:
 checks_df.to_csv('outputs/part_a_checks.csv', index=False)
-print("Saved successfully!")
+print("'outputs/part_a_checks.csv' !!Saved successfully!!")
+
+
+# Adding new column to clean_data "distance_band":
+clean_data['distance_band']= pd.cut(
+    clean_data['distance_km'],
+    bins= [0, 200, 400, 600, 2000],
+    labels= ['0-200', '201-400', '401-600', '601+'],
+    right= True
+)
+
+# Grouping "service_type", "hub_tier", "distance_band" and check some metric:
+group_cols = ['service_type', 'hub_tier', 'distance_band']
+summaries_list = []
+
+for cols in group_cols:
+    summary= clean_data.groupby(cols, observed=False).agg(
+        shipments=(cols, 'count'),
+        delayed=('is_delayed', 'sum'),
+        delay_rate= ('is_delayed', 'mean'),
+        mean_hours= ('delivery_hours', 'mean'),
+    ).reset_index().rename(columns= {cols: 'group'})
+
+    # Applying astype(str) to the DataFrame column:
+    summary['group'] = summary['group'].astype(str)
+    
+    # Adding the dimension column:
+    summary['dimension'] = cols
+
+    summaries_list.append(summary)
+
+# Combine all summaries into one master table:
+summaries= pd.concat(summaries_list, ignore_index= True)
+
+# Rounding to (4 decimal place) the columns with float value:
+summaries[['delay_rate', 'mean_hours']] = round(summaries[['delay_rate', 'mean_hours']], 4)
+
+# Changing the column order as per the brief:
+col_order = ['dimension', 'group', 'shipments', 'delayed', 'delay_rate', 'mean_hours']
+master_summary = summaries[col_order]
+
+master_summary.to_csv('outputs/part_a_delay_by_group.csv', index=False)
+print("'outputs/part_a_delay_by_group.csv' !!Saved successfully!!")
+
+print("\n")
+print(master_summary)
