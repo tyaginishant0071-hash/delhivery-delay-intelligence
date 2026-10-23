@@ -24,6 +24,7 @@ checks= {
     'service_type_spellings_before': dedup_raw['service_type'].nunique(),
 }
 
+print("\n")
 print("Metric checks before cleaning data:\n",checks)
 
 
@@ -38,6 +39,7 @@ clean_data= build_features(clean_data, hubs_df)
 clean_data['is_delayed']= (clean_data['delivery_hours'] > clean_data['promised_hours']).astype(int)
 
 # Using print function to print both "clean data" and "computed medians":
+print("\n")
 print("Clean Data:\n",clean_data)
 print("Medians:", computed_medians)
 print("Sum of is_delayed:", clean_data["is_delayed"].sum())
@@ -78,6 +80,7 @@ checks_2= {
     'hours_outlier_count': ((clean_data['delivery_hours'] < lower_bound) | (clean_data['delivery_hours'] > upper_bound)).sum()
 }
 
+print("\n")
 print("Metric checks after cleaning:\n",checks_2)
 
 # Combine dictionaries:
@@ -96,6 +99,7 @@ checks_df= pd.DataFrame(list(rounded_checks.items()), columns= ['metric', 'value
 
 # Save to CSV:
 checks_df.to_csv('outputs/part_a_checks.csv', index=False)
+print("\n")
 print("'outputs/part_a_checks.csv' !!Saved successfully!!")
 
 
@@ -137,8 +141,21 @@ summaries[['delay_rate', 'mean_hours']] = round(summaries[['delay_rate', 'mean_h
 col_order = ['dimension', 'group', 'shipments', 'delayed', 'delay_rate', 'mean_hours']
 master_summary = summaries[col_order]
 
+# Save the file:
 master_summary.to_csv('outputs/part_a_delay_by_group.csv', index=False)
+print("\n")
 print("'outputs/part_a_delay_by_group.csv' !!Saved successfully!!")
 
+# The correlation matrix of the numeric columns of the modelling table (row labels kept as the first column):
+# Select only numeric columns from the clean_data table:
+numeric_df = clean_data.select_dtypes(include=['number'])
+
+# Computing the correlation matrix:
+corr_matrix = round(numeric_df.corr(), 4)
+
+# Save the file:
+corr_matrix.to_csv('outputs/part_a_correlations.csv')
+
 print("\n")
-print(master_summary)
+print("'outputs/part_a_correlations.csv' !!Saved successfully!!")
+
