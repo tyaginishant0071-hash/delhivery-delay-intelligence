@@ -1,6 +1,6 @@
 # delhivery-delay-intelligence
 
-## Data Findings
+## Data findings
 
 1. **Service type:** Express has the highest delay rate, at 0.4897 (48.97%).
 
