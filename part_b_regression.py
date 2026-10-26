@@ -7,8 +7,13 @@ os.makedirs('outputs', exist_ok= True)
 from src.shipment_prep import FEATURES
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, root_mean_squared_error, r2_score
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+
+
 
 
 
@@ -102,19 +107,126 @@ for d in depths:
     })
 
 # Building a dataframe:
-metrics_df= pd.DataFrame(tree_result)
-metrics_df['max_depth']= metrics_df['max_depth'].str.replace('None', 'unlimited')
+tree_depth_df= pd.DataFrame(tree_result)
+tree_depth_df['max_depth']= tree_depth_df['max_depth'].str.replace('None', 'unlimited')
 
 # Save the file:
-metrics_df.to_csv("outputs/part_b_tree_depth.csv", index= False)
+tree_depth_df.to_csv("outputs/part_b_tree_depth.csv", index= False)
 print("'outputs/part_b_tree_depth.csv' !! Saved Successfully !!\n")
 
 # Pick the best depth:
-best_depth= metrics_df.loc[metrics_df['val_rmse'].idxmin()]['max_depth']
+best_depth= tree_depth_df.loc[tree_depth_df['val_rmse'].idxmin()]['max_depth']
 # Changing str to int:
 if 'unlimited' in best_depth:
   best_depth= None
 else:
   best_depth= int(best_depth)
 
+print(f"Best depth: {best_depth}\n")
 
+# Building a scikit-learn Pipeline consisting of a "StandardScaler" and a "LinearRegression":
+pipeline= Pipeline([
+    ('scaler', StandardScaler()),
+    ('model', LinearRegression())
+])
+
+# Fitting the pipeline on "X_train" and "y_train":
+pipeline.fit(X_train, y_train)
+
+# Prediction on X_val, compute MAE, MSE, RMSE, and R2. Appending the dictionary with model: 'linear_regression' and split: 'val':
+y_val_pipe = pipeline.predict(X_val)
+all_model_metrics.append({
+    'model': 'linear_regression',
+    'split': 'val',
+    'MAE': round(mean_absolute_error(y_val, y_val_pipe), 4),
+    'MSE': round(mean_squared_error(y_val, y_val_pipe), 4),
+    'RMSE': round(root_mean_squared_error(y_val, y_val_pipe), 4),
+    'R2': round(r2_score(y_val, y_val_pipe), 4)
+})
+
+# Initializing a "DecisionTreeRegressor" using the optimal "max_depth= best_depth" (along with random_state=42):
+model_DT= DecisionTreeRegressor(max_depth= best_depth, random_state= 42)
+
+# Fitting the "DecisionTreeRegressor" on "X_train" and "y_train":
+model_DT.fit(X_train, y_train)
+
+# Prediction on X_val, compute MAE, MSE, RMSE, and R2. Appending the dictionary with model: 'decision_tree' and split: 'val':
+y_val_DT= model_DT.predict(X_val)
+all_model_metrics.append({
+    'model': 'decision_tree', 
+    'split': 'val',
+    'MAE': round(mean_absolute_error(y_val, y_val_DT), 4),
+    'MSE': round(mean_squared_error(y_val, y_val_DT), 4),
+    'RMSE': round(root_mean_squared_error(y_val, y_val_DT), 4),
+    'R2': round(r2_score(y_val, y_val_DT), 4)
+})
+
+# Initializing a RandomForestRegressor(n_estimators=100, random_state=42):
+rfr= RandomForestRegressor(n_estimators= 100, random_state= 42)
+
+# Fitting the "RandomForestRegressor" on "X_train" and "y_train":
+rfr.fit(X_train, y_train)
+
+# Prediction on X_val, compute MAE, MSE, RMSE, and R2. Appending the dictionary with model: 'random_forest' and split: 'val':
+y_val_rfr= rfr.predict(X_val)
+all_model_metrics.append({
+    'model': 'random_forest', 
+    'split': 'val',
+    'MAE': round(mean_absolute_error(y_val, y_val_rfr),4),
+    'MSE': round(mean_squared_error(y_val, y_val_rfr), 4),
+    'RMSE': round(root_mean_squared_error(y_val, y_val_rfr), 4),
+    'R2': round(r2_score(y_val, y_val_rfr), 4)
+})
+
+# Initializing a GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, random_state=42):
+gbr= GradientBoostingRegressor(n_estimators= 100, learning_rate= 0.1, random_state= 42)
+
+# Fitting the "GradientBoostingRegressor" on "X_train" and "y_train":
+gbr.fit(X_train, y_train)
+
+# Prediction on X_val, compute MAE, MSE, RMSE, and R2. Appending the dictionary with model: 'gradient_boosting' and split: 'val:
+y_val_gbr= gbr.predict(X_val)
+all_model_metrics.append({
+    'model': 'gradient_boosting', 
+    'split': 'val',
+    'MAE': round(mean_absolute_error(y_val, y_val_gbr), 4),
+    'MSE': round(mean_squared_error(y_val, y_val_gbr),4),
+    'RMSE': round(root_mean_squared_error(y_val, y_val_gbr), 4),
+    'R2': round(r2_score(y_val, y_val_gbr),4)
+})
+
+# Creating a list of different learning rate:
+learning_rates= [0.01, 0.1, 1.0]
+
+# Initializing a empty python list "gb_results" to collect the performance metrics:
+gb_results= []
+
+# Looping through each learing rates:
+for lr in learning_rates:
+
+  # Instantiate a "GradientBoostingRegressor" with (n_estimators=100, the current learning_rate, and random_state=42):
+  model_GBR= GradientBoostingRegressor(n_estimators= 100, learning_rate= lr, random_state= 42)
+
+  # Fitting the model using "X_train" and "y_train":
+  model_GBR.fit(X_train, y_train)
+
+  # Generate predictions on your validation features (X_val):
+  y_val_gb= model_GBR.predict(X_val)
+
+  # Calculating the Validation RMSE and Validation R2 score by comparing predictions against (y_val):
+  # Appending a dictionary containing learning_rate, val_rmse, and val_r2 to the results list:
+  gb_results.append({
+      'learning_rate': lr,
+      'val_rmse': round(root_mean_squared_error(y_val, y_val_gb), 4),
+      'val_r2': round(r2_score(y_val, y_val_gb), 4)
+  })
+  
+# Converting the list into a pandas DataFrame:
+gb_results_df= pd.DataFrame(gb_results)
+
+# Save the file:
+gb_results_df.to_csv("outputs/part_b_gb_learning_rate.csv", index= False)
+print("'outputs/part_b_gb_learning_rate.csv' !! Saved Successfully !!\n")
+
+
+print(gb_results_df)
