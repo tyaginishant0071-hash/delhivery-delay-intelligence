@@ -88,11 +88,11 @@ for d in depths:
 
     # For each tree, computing train_rmse on the training rows and val_rmse on the validation rows.
     y_train_pred= model_DTR.predict(X_train)
-    y_val_pred= model_DTR.predict(X_val)
+    y_val_tree= model_DTR.predict(X_val)
 
     # Computing metrics
     train_rmse= np.sqrt(mean_squared_error(y_train, y_train_pred))
-    val_rmse= np.sqrt(mean_squared_error(y_val, y_val_pred))
+    val_rmse= np.sqrt(mean_squared_error(y_val, y_val_tree))
     
     # Using dict to add the train_rmse and val_rmse and also, rounding the values by (4):
     tree_result.append({
@@ -109,4 +109,12 @@ metrics_df['max_depth']= metrics_df['max_depth'].str.replace('None', 'unlimited'
 metrics_df.to_csv("outputs/part_b_tree_depth.csv", index= False)
 print("'outputs/part_b_tree_depth.csv' !! Saved Successfully !!\n")
 
-print(metrics_df)
+# Pick the best depth:
+best_depth= metrics_df.loc[metrics_df['val_rmse'].idxmin()]['max_depth']
+# Changing str to int:
+if 'unlimited' in best_depth:
+  best_depth= None
+else:
+  best_depth= int(best_depth)
+
+
