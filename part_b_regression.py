@@ -265,11 +265,11 @@ for model_name in top_2_rank:
   model= model_objects[model_name]
 
   # Initialize:
-  r2_cv_score= cross_val_score(estimator= model, X= X_train_val, y= y_train_val, cv= kf, scoring= 'r2')
+  r2_cv_score= cross_val_score(estimator= model, X= X_train_val, y= y_train_val, cv= kf)
   cv_results.append({
       'model': model_name,
-      'r2_mean': round(r2_cv_score.mean(), 4),
-      'r2_std': round(r2_cv_score.std(), 4)
+      'mean_r2': round(r2_cv_score.mean(), 4),
+      'std_r2': round(r2_cv_score.std(), 4)
   })
 
 # Creating a DataFrame and Save the file:
@@ -281,7 +281,7 @@ print("'outputs/part_b_cv.csv' !!Saved Successfully!!\n")
 # Passing unscaled X_test directly (since StandardScaler is built into the pipeline)
 y_test_pred = pipeline.predict(X_test)
 
-# Compute MAE, MSE, RMSE, and R2. Adding to the metrics_df: 'linear_regression' and split: 'test':
+# Compute MAE, MSE, RMSE, and R2. Adding to the metrics_df model: 'linear_regression' and split: 'test':
 test_row= {
     'model': 'linear_regression',
     'split': 'test',
