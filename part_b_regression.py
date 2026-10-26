@@ -8,6 +8,7 @@ from src.shipment_prep import FEATURES
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.tree import DecisionTreeRegressor
 
 
 
@@ -73,6 +74,39 @@ baseline_metrics = {
 
 # Initialize a list to collect results across all models:
 all_model_metrics = [baseline_metrics]
-
 print("Baseline metrics collected successfully!\n")
 
+# Loop over depths "1, 2, 3, 4, 6, 8, 12 and None". That’s 8 trees, each DecisionTreeRegressor(max_depth=d, random_state=42):
+depths= [1, 2, 3, 4, 6, 8, 12, None]
+tree_result= []
+
+for d in depths:
+    model_DTR= DecisionTreeRegressor(max_depth= d, random_state= 42)     # "model_DTR" refers to model DecisionTreeRegressor:
+
+    # Fitting each on X_train:
+    model_DTR.fit(X_train, y_train)
+
+    # For each tree, computing train_rmse on the training rows and val_rmse on the validation rows.
+    y_train_pred= model_DTR.predict(X_train)
+    y_val_pred= model_DTR.predict(X_val)
+
+    # Computing metrics
+    train_rmse= np.sqrt(mean_squared_error(y_train, y_train_pred))
+    val_rmse= np.sqrt(mean_squared_error(y_val, y_val_pred))
+    
+    # Using dict to add the train_rmse and val_rmse and also, rounding the values by (4):
+    tree_result.append({
+        'max_depth': str(d),
+        'train_rmse': round(train_rmse, 4),
+        'val_rmse': round(val_rmse, 4)
+    })
+
+# Building a dataframe:
+metrics_df= pd.DataFrame(tree_result)
+metrics_df['max_depth']= metrics_df['max_depth'].str.replace('None', 'unlimited')
+
+# Save the file:
+metrics_df.to_csv("outputs/part_b_tree_depth.csv", index= False)
+print("'outputs/part_b_tree_depth.csv' !! Saved Successfully !!\n")
+
+print(metrics_df)
