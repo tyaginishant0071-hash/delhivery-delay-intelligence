@@ -196,11 +196,9 @@ all_model_metrics.append({
     'R2': round(r2_score(y_val, y_val_gbr),4)
 })
 
-# Creating a DataFrame and save the file:
+# Creating a DataFrame:
 models_metrics_df= pd.DataFrame(all_model_metrics)
 models_metrics_df= models_metrics_df[['model', 'split', 'MAE', 'MSE', 'RMSE', 'R2']]
-models_metrics_df.to_csv('outputs/part_b_metrics.csv', index=False)
-print("'outputs/part_b_metrics.csv' !! Saved Successfully !\n")
 
 # Creating a list of different learning rate:
 learning_rates= [0.01, 0.1, 1.0]
@@ -294,3 +292,7 @@ test_row= {
 }
 
 models_metrics_df= pd.concat([models_metrics_df, pd.DataFrame([test_row])], ignore_index= True)
+
+# Save the file:
+models_metrics_df.to_csv('outputs/part_b_metrics.csv', index=False)
+print("'outputs/part_b_metrics.csv' !! Saved Successfully !\n")
