@@ -12,6 +12,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.model_selection import KFold, cross_val_score
 
 
 
@@ -195,6 +196,12 @@ all_model_metrics.append({
     'R2': round(r2_score(y_val, y_val_gbr),4)
 })
 
+# Creating a DataFrame and save the file:
+models_metrics_df= pd.DataFrame(all_model_metrics)
+models_metrics_df= models_metrics_df[['model', 'split', 'MAE', 'MSE', 'RMSE', 'R2']]
+models_metrics_df.to_csv('outputs/part_b_metrics.csv', index=False)
+print("'outputs/part_b_metrics.csv' !! Saved Successfully !\n")
+
 # Creating a list of different learning rate:
 learning_rates= [0.01, 0.1, 1.0]
 
@@ -228,5 +235,62 @@ gb_results_df= pd.DataFrame(gb_results)
 gb_results_df.to_csv("outputs/part_b_gb_learning_rate.csv", index= False)
 print("'outputs/part_b_gb_learning_rate.csv' !! Saved Successfully !!\n")
 
+# Ranking Candidates by Validation RMSE and removing the "mean_baseline" model:
+sorted_ranking = models_metrics_df[models_metrics_df['model'] != 'mean_baseline'].sort_values(by='RMSE', ascending= True).reset_index(drop= True)
 
-print(gb_results_df)
+# Identifying the top 2 rank candidate:
+top_2_rank= sorted_ranking.head(2)['model'].tolist()
+print(f"Top 2 rank candidate: {top_2_rank}\n")
+
+best_model_name= top_2_rank[0]
+print(f"Best model name: {best_model_name}\n")
+
+# Combine Training and Validation Data (X_train with X_val, and y_train with y_val):
+X_train_val= pd.concat([X_train, X_val])
+y_train_val= pd.concat([y_train, y_val])
+
+# Dictionary mapping model names to their instantiated objects
+model_objects = {
+    'linear_regression': Pipeline([('scaler', StandardScaler()), ('model', LinearRegression())]),
+    'decision_tree': DecisionTreeRegressor(max_depth=best_depth, random_state=42),
+    'random_forest': RandomForestRegressor(n_estimators=100, random_state=42),
+    'gradient_boosting': GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
+}
+
+# Creating a single KFold(n_splits=5, shuffle=True, random_state=42)
+kf= KFold(n_splits= 5, shuffle= True, random_state= 42)
+
+cv_results= []
+# Looping through each model:
+# Running cross-validation for each selected model with the same splitter and default R² scoring:
+for model_name in top_2_rank:
+  model= model_objects[model_name]
+
+  # Initialize:
+  r2_cv_score= cross_val_score(estimator= model, X= X_train_val, y= y_train_val, cv= kf, scoring= 'r2')
+  cv_results.append({
+      'model': model_name,
+      'r2_mean': round(r2_cv_score.mean(), 4),
+      'r2_std': round(r2_cv_score.std(), 4)
+  })
+
+# Creating a DataFrame and Save the file:
+cv_results_df= pd.DataFrame(cv_results)
+cv_results_df.to_csv("outputs/part_b_cv.csv", index= False)
+print("'outputs/part_b_cv.csv' !!Saved Successfully!!\n")
+
+# Using the pipeline already fitted on X_train, y_train
+# Passing unscaled X_test directly (since StandardScaler is built into the pipeline)
+y_test_pred = pipeline.predict(X_test)
+
+# Compute MAE, MSE, RMSE, and R2. Adding to the metrics_df: 'linear_regression' and split: 'test':
+test_row= {
+    'model': 'linear_regression',
+    'split': 'test',
+    'MAE': round(mean_absolute_error(y_test, y_test_pred), 4),
+    'MSE': round(mean_squared_error(y_test, y_test_pred),4),
+    'RMSE': round(root_mean_squared_error(y_test, y_test_pred), 4),
+    'R2': round(r2_score(y_test, y_test_pred),4)
+}
+
+models_metrics_df= pd.concat([models_metrics_df, pd.DataFrame([test_row])], ignore_index= True)
