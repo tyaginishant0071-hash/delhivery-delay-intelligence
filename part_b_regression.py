@@ -7,6 +7,8 @@ os.makedirs('outputs', exist_ok= True)
 from src.shipment_prep import FEATURES
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
 
 
 # Loading data from "modelling_table.csv":
@@ -51,4 +53,26 @@ checks_df = pd.DataFrame(rounded_dict.items(), columns= ['metric', 'value'], dty
 checks_df.to_csv("outputs/part_b_checks.csv", index= False)
 print("'outputs/part_b_checks.csv' !! Saved Successfully !!\n")
 
-print(checks_df)
+# Predicting the mean of "y_train" for every validation row and record its metrics:
+# Computing the mean of y_train:
+y_train_mean= y_train.mean() 
+print("Mean of y_train:\n", y_train_mean)
+
+# Making a prediction for every validation row, which is that one number repeated 180 times using "np.full":
+y_val_pred= np.full(shape= y_val.shape, fill_value=y_train_mean)
+
+# Store the mean baseline results and score it against y_val with four numbers using "sklearn.metrics":
+baseline_metrics = {
+    'model': 'mean_baseline',
+    'split': 'val',
+    'MAE': round(mean_absolute_error(y_val, y_val_pred), 4),
+    'MSE': round(mean_squared_error(y_val, y_val_pred), 4),
+    'RMSE': round(np.sqrt(mean_squared_error(y_val, y_val_pred)), 4),
+    'R2': round(r2_score(y_val, y_val_pred), 4)
+}
+
+# Initialize a list to collect results across all models:
+all_model_metrics = [baseline_metrics]
+
+print("Baseline metrics collected successfully!\n")
+
