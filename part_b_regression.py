@@ -185,7 +185,7 @@ gbr= GradientBoostingRegressor(n_estimators= 100, learning_rate= 0.1, random_sta
 # Fitting the "GradientBoostingRegressor" on "X_train" and "y_train":
 gbr.fit(X_train, y_train)
 
-# Prediction on X_val, compute MAE, MSE, RMSE, and R2. Appending the dictionary with model: 'gradient_boosting' and split: 'val:
+# Prediction on X_val, compute MAE, MSE, RMSE, and R2. Appending the dictionary with model: 'gradient_boosting' and split: 'val':
 y_val_gbr= gbr.predict(X_val)
 all_model_metrics.append({
     'model': 'gradient_boosting', 
@@ -215,7 +215,7 @@ for lr in learning_rates:
   # Fitting the model using "X_train" and "y_train":
   model_GBR.fit(X_train, y_train)
 
-  # Generate predictions on your validation features (X_val):
+  # Generating predictions on the validation features (X_val):
   y_val_gb= model_GBR.predict(X_val)
 
   # Calculating the Validation RMSE and Validation R2 score by comparing predictions against (y_val):
@@ -277,13 +277,27 @@ cv_results_df= pd.DataFrame(cv_results)
 cv_results_df.to_csv("outputs/part_b_cv.csv", index= False)
 print("'outputs/part_b_cv.csv' !!Saved Successfully!!\n")
 
-# Using the pipeline already fitted on X_train, y_train
-# Passing unscaled X_test directly (since StandardScaler is built into the pipeline)
-y_test_pred = pipeline.predict(X_test)
+# For testing, we are using the best model:
+# Selecting the correct fitted model object based on best_model_name:
+selected_model = None
+if best_model_name == "linear_regression":
+    selected_model = pipeline
+elif best_model_name == "decision_tree":
+    selected_model = model_DT
+elif best_model_name == "random_forest":
+    selected_model = rfr
+elif best_model_name == "gradient_boosting":
+    selected_model = gbr
+else:
+    raise ValueError(f"Unknown best_model_name: {best_model_name}")
 
-# Compute MAE, MSE, RMSE, and R2. Adding to the metrics_df model: 'linear_regression' and split: 'test':
+# Using the best_model:
+# Passing unscaled X_test directly (since StandardScaler is built into the pipeline) applies to linear regression alone.
+y_test_pred = selected_model.predict(X_test)
+
+# Compute MAE, MSE, RMSE, and R2. Adding to the metrics_df: model: 'best_model' and split: 'test':
 test_row= {
-    'model': 'linear_regression',
+    'model': best_model_name,
     'split': 'test',
     'MAE': round(mean_absolute_error(y_test, y_test_pred), 4),
     'MSE': round(mean_squared_error(y_test, y_test_pred),4),
