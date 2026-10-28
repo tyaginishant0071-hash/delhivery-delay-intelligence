@@ -3,7 +3,7 @@ import numpy as np
 import warnings
 
 from src.shipment_prep import FEATURES, NOISE_COLUMNS
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -120,23 +120,23 @@ all_models.append({
 
 
 # 4. Random Forest Classifier:
-model_RFC= RandomForestClassifier(n_estimators=100, random_state=42)
+model_RFC_1= RandomForestClassifier(n_estimators=100, random_state=42)
 
 # Fitting on "X_train and y_train" and prediction on "X_val":
-model_RFC.fit(X_train, y_train)
-y_val_RFC_pred = model_RFC.predict(X_val)
+model_RFC_1.fit(X_train, y_train)
+y_val_RFC_1_pred = model_RFC_1.predict(X_val)
 
 # Evaluation metrics:
-cm = confusion_matrix(y_val, y_val_RFC_pred)
+cm = confusion_matrix(y_val, y_val_RFC_1_pred)
 TN, FP, FN, TP= cm.ravel()              # Used for unpacking the matrix.
 
 all_models.append({
     'model': 'random_forest_default',
     'TN': TN, 'FP': FP, 'FN': FN, 'TP': TP,
-    'accuracy': round(accuracy_score(y_val, y_val_RFC_pred), 4),
-    'precision': round(precision_score(y_val, y_val_RFC_pred, zero_division=0), 4),
-    'recall': round(recall_score(y_val, y_val_RFC_pred, zero_division=0), 4),
-    'f1': round(f1_score(y_val, y_val_RFC_pred, zero_division=0), 4)
+    'accuracy': round(accuracy_score(y_val, y_val_RFC_1_pred), 4),
+    'precision': round(precision_score(y_val, y_val_RFC_1_pred, zero_division=0), 4),
+    'recall': round(recall_score(y_val, y_val_RFC_1_pred, zero_division=0), 4),
+    'f1': round(f1_score(y_val, y_val_RFC_1_pred, zero_division=0), 4)
 })
 
 print("All models successfully trained and evaluated!\n")
@@ -152,11 +152,11 @@ print("'outputs/part_c_models.csv' !! Saved Successfully !!\n")
 
 # Extract Feature Importances from a Default Random Forest:
 # Initializing and fitting a RandomForestClassifier on the training data:
-model_RFC= RandomForestClassifier(n_estimators=100, random_state=42)
-model_RFC.fit(X_train, y_train)
+model_RFC_2= RandomForestClassifier(n_estimators=100, random_state=42)
+model_RFC_2.fit(X_train, y_train)
 
 # Retrieve the feature importance scores using ".feature_importances_" mapped to each 17 feature names.
-feature_importance= model_RFC.feature_importances_
+feature_importance= model_RFC_2.feature_importances_
 
 # Calculate Univariate F-Scores via SelectKBest:
 # Initializing and fitting SelectKBest with f_classif on the training data:
@@ -193,7 +193,7 @@ kbest_results= []
 for k in kbest:                  # Looping through the Kbest.
   selectk_pipline= Pipeline([
       ('selector', SelectKBest(score_func=f_classif, k=k)),
-      ('model', RandomForestClassifier(n_estimators=100, random_state=42))
+      ('model_RF', RandomForestClassifier(n_estimators=100, random_state=42))
   ])
   
   # Fitting on "X_train and y_train" and prediction on "X_val":
@@ -219,3 +219,102 @@ print("'outputs/part_c_selectk.csv' saved successfully!\n")
 # Lock in k = 7 for subsequent modeling:
 k = 7
 print(f"Feature selection complete. Locked in k = {k} for future modeling steps.")
+
+# Selecting Kbest and fitting only training data:
+kbest= SelectKBest(score_func= f_classif, k= 7)
+kbest.fit(X_train, y_train)
+
+# Transforming both training and validation data:
+X_train_k7= kbest.transform(X_train)
+X_val_k7= kbest.transform(X_val)
+
+# Hyperparameter spaces: the parameter dict to search across:
+param_grid= {
+  'n_estimators': [50, 100, 150],
+  'max_depth': [4, 6, 8],
+  'min_samples_leaf': [1, 5, 10]
+}
+
+all_models_2= []
+
+# Setting up GridSearchCV using a RandomForestClassifier(random_state=42), the parameter grid, and cv=5:
+grid_search= GridSearchCV(estimator= RandomForestClassifier(random_state= 42), param_grid= param_grid, cv= 5)
+
+# Fitting on "X_train_k7": extracting the best parameters and best score (best_cv_accuracy):
+grid_search.fit(X_train_k7, y_train)
+best_params= grid_search.best_params_
+best_cv_accuracy= grid_search.best_score_
+
+# Predicting on "X_val_k7" to calculate the validation "val_f1" score:
+y_val_GSV_pred= grid_search.predict(X_val_k7)
+val_f1_grid= f1_score(y_val, y_val_GSV_pred, zero_division=0)
+
+# Appending tuning and models to "all_models_2"
+# Grid Search Metrics:
+candidates_gs = 3 * 3 * 3        # 27
+cv_folds_gs = 5
+total_fits_gs = candidates_gs * cv_folds_gs
+
+all_models_2.append({
+    'search': 'grid_search',
+    'candidates': candidates_gs,
+    'cv_folds': cv_folds_gs,
+    'total_fits': total_fits_gs,
+    'best_params': grid_search.best_params_,
+    'best_cv_accuracy': round(grid_search.best_score_, 4),
+    'val_f1': round(val_f1_grid, 4)
+})
+
+
+# Setting up RandomizedSearchCV using same base model, parameter grid, n_iter= 9, cv=5 and random_state=42:
+random_search= RandomizedSearchCV(estimator= RandomForestClassifier(random_state= 42), param_distributions= param_grid, n_iter= 9, cv= 5, random_state= 42)
+
+# Fitting on "X_train_k7": extracting the best parameters and best score (best_cv_accuracy):
+random_search.fit(X_train_k7, y_train)
+best_params_random= random_search.best_params_
+best_cv_accuracy_random= random_search.best_score_
+
+# Predicting on "X_val_k7" to calculate the validation "val_f1" score:
+y_val_RS_pred= random_search.predict(X_val_k7)
+val_f1_random= f1_score(y_val, y_val_RS_pred, zero_division=0)
+
+# Appending Randomized Search Metrics:
+candidates_rs = 9        # n_iter
+cv_folds_rs = 5
+total_fits_rs = candidates_rs * cv_folds_rs
+
+all_models_2.append({
+    'search': 'random_search',
+    'candidates': candidates_rs,
+    'cv_folds': cv_folds_rs,
+    'total_fits': total_fits_rs,
+    'best_params': random_search.best_params_,
+    'best_cv_accuracy': round(random_search.best_score_, 4),
+    'val_f1': round(val_f1_random, 4)
+})
+
+
+# Configuring and fitting: RandomForestClassifier(n_estimators=100, random_state=42) with (default depth limit, min_samples_leaf=1) on X_train_k7.
+model_RFC_3= RandomForestClassifier(n_estimators=100, min_samples_leaf= 1, random_state=42)
+model_RFC_3.fit(X_train_k7, y_train)
+
+# Predict on "X_val_k7" to calculate validation "val_f1" score:
+y_val_RFC_3_pred= model_RFC_3.predict(X_val_k7)
+val_f1_RFC_3= f1_score(y_val, y_val_RFC_3_pred, zero_division=0)
+
+# Default Forest Baseline Metrics (same 7 features)
+all_models_2.append({
+    'search': 'default_forest_same_7_features',
+    'candidates': 1,
+    'cv_folds': 0,
+    'total_fits': 1,
+    'best_params': "n_estimators=100, min_samples_leaf=1 (defaults)",
+    'best_cv_accuracy': "",  # Left blank as specified
+    'val_f1': round(val_f1_RFC_3, 4)
+})
+
+# Creating DataFrame and save the file:
+tuning_df = pd.DataFrame(all_models_2)
+tuning_df.to_csv('outputs/part_c_tuning.csv', index=False)
+print("'outputs/part_c_tuning.csv' saved successfully!\n")
+print(tuning_df)
