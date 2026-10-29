@@ -435,7 +435,7 @@ print("'outputs/part_c_final_test.csv' saved successfully!\n")
 # Extracting final configuration parameters from the winning model:
 rf_model_step= final_pipeline.named_steps['model']
 n_est= rf_model_step.n_estimators
-max_depth= rf_model_step.max_depth if rf_model_step.max_depth is not None else 'Unlimited'
+max_depth= rf_model_step.max_depth if rf_model_step.max_depth is not None else 'unlimited'
 min_samples_leaf= rf_model_step.min_samples_leaf
 chosen_source= winning_row['search']                         # From the tuning dataframe winner
 

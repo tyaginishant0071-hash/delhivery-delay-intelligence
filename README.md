@@ -25,3 +25,18 @@
 4. **Learning rate:** A learning rate of 0.1 performed best, with a validation R² of 0.9306. At 0.01, the model learned too slowly with 100 trees (R² 0.7127); at 1.0, it was too aggressive and performed worse (R² 0.8440).
 
 5. **Model choice:** Cross-validation modestly favored gradient boosting, with a mean R² of 0.9353 versus 0.9261 for linear regression—a difference of 0.0092, about twice either model’s fold-to-fold standard deviation. I would still choose linear regression because it had the lower validation RMSE (4.8912 versus 4.9165 hours) and is simpler, while recognizing that gradient boosting may perform slightly better across different data splits.
+
+## Classification
+
+1. **Blind Baseline Model:** The blind baseline achieved 0.7667 accuracy by predicting every parcel would be on time, but its recall was 0.0000 because it missed all 42 delayed parcels; it is therefore useless for proactive delay alerts.
+
+2. **Noise Columns:**  The five noise columns account for a combined 0.2245 of the forest’s feature importance, but all rank below the top seven by F-score. Their F-scores rank are: 8, 12, 14, 16, and 17.
+
+3. **Number of features:** The table shows that selecting 7 features gave the highest validation F1 (0.8333). The scores for k=5, 10, 12, and 17 were 0.6988, 0.7857, 0.8049, and 0.7848, respectively.
+
+4. **Tuning:** The untuned forest using the same seven features scored a higher validation F1 (0.8333) than grid search (0.7750) or randomized search (0.7848). Tuning did not improve F1 in this run, but with only 180 validation parcels, a few cases can affect the comparison; this result doesn’t show that tuning is always unhelpful.
+
+5. **Alert threshold:** The chosen threshold was 0.5, with validation precision of 0.7955 and recall of 0.8333. It caught 35 of 42 delayed parcels, with 9 false alerts and 7 missed delays. At 0.6, precision rose to 0.8889, but recall fell to 0.7619—below the required 0.80.
+
+6. **Final test:** The model had test precision of 0.6889, recall of 0.7561, and F1 of 0.7209. Its test recall was below validation recall (0.8333): it caught 31 of the 41 delayed test parcels and missed 10. Because the test set has only 41 delayed parcels, a few cases can noticeably affect the recall.
+
