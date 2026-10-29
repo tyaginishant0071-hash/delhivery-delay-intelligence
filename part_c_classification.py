@@ -357,3 +357,50 @@ final_pipeline= Pipeline([
 # Fitting on "X_train and y_train" and prediction on "X_val":
 final_pipeline.fit(X_train, y_train)
 print("Final model pipeline successfully built and fitted on training data!\n")
+
+# Extracting validation probabilities for the positive class (delayed):
+y_val_probs = final_pipeline.predict_proba(X_val)[:, 1]
+
+# Using the literal list of threshold:
+threshold= [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+threshold_results= []
+
+# Looping through the threshold list and evaluate metrics:
+for t in threshold:
+
+  # Generating binary predictions by checking if the probability is greater than or equal to t: 
+  preds= (y_val_probs >= t).astype(int)
+
+  # Computing the confusion matrix and unpacking its values using .ravel() to get TN, FP, FN, TP:
+  cm= confusion_matrix(y_val, preds)
+  TN, FP, FN, TP= cm.ravel()
+
+  # Evaluating metrics:
+  threshold_results.append({
+      'threshold': t,
+      'TN': TN, 'FP': FP, 'FN': FN, 'TP': TP,
+      'accuracy': round(accuracy_score(y_val, preds), 4),
+      'precision': round(precision_score(y_val, preds, zero_division=0), 4),
+      'recall': round(recall_score(y_val, preds, zero_division=0), 4),
+      'f1': round(f1_score(y_val, preds, zero_division=0), 4)
+  })
+
+# Creating a dataframe:
+threshold_results_df= pd.DataFrame(threshold_results)
+threshold_results_df= threshold_results_df[['threshold', 'TN', 'FP', 'FN', 'TP', 'accuracy', 'precision', 'recall', 'f1']]
+
+# Save the file:
+threshold_results_df.to_csv('outputs/part_c_thresholds.csv', index= False)
+print("'outputs/part_c_thresholds.csv' saved successfully!\n")
+
+# Applying the Business Rule to Select the Final Alert Threshold:
+# Filtering evaluating threshold to find instances where "recall >= 0.80":
+filtered_recall= threshold_results_df[threshold_results_df['recall'] >= 0.80]
+
+# Picking the highest t and if no threshold reaches a recall of 0.80, fallback and select 0.1 as your alert threshold:
+if not filtered_recall.empty:
+  highest_threshold= filtered_recall['threshold'].max()
+else:
+  highest_threshold= 0.1
+
+print(f"Selected Optimal Alert Threshold: {highest_threshold}")
