@@ -218,7 +218,7 @@ print("'outputs/part_c_selectk.csv' saved successfully!\n")
 
 # Lock in k = 7 for subsequent modeling:
 k = 7
-print(f"Feature selection complete. Locked in k = {k} for future modeling steps.")
+print(f"Feature selection complete. Locked in k = {k} for future modeling steps.\n")
 
 # Selecting Kbest and fitting only training data:
 kbest= SelectKBest(score_func= f_classif, k= 7)
@@ -267,15 +267,15 @@ all_models_2.append({
 
 
 # Setting up RandomizedSearchCV using same base model, parameter grid, n_iter= 9, cv=5 and random_state=42:
-random_search= RandomizedSearchCV(estimator= RandomForestClassifier(random_state= 42), param_distributions= param_grid, n_iter= 9, cv= 5, random_state= 42)
+randomized_search= RandomizedSearchCV(estimator= RandomForestClassifier(random_state= 42), param_distributions= param_grid, n_iter= 9, cv= 5, random_state= 42)
 
 # Fitting on "X_train_k7": extracting the best parameters and best score (best_cv_accuracy):
-random_search.fit(X_train_k7, y_train)
-best_params_random= random_search.best_params_
-best_cv_accuracy_random= random_search.best_score_
+randomized_search.fit(X_train_k7, y_train)
+best_params_random= randomized_search.best_params_
+best_cv_accuracy_random= randomized_search.best_score_
 
 # Predicting on "X_val_k7" to calculate the validation "val_f1" score:
-y_val_RS_pred= random_search.predict(X_val_k7)
+y_val_RS_pred= randomized_search.predict(X_val_k7)
 val_f1_random= f1_score(y_val, y_val_RS_pred, zero_division=0)
 
 # Appending Randomized Search Metrics:
@@ -284,12 +284,12 @@ cv_folds_rs = 5
 total_fits_rs = candidates_rs * cv_folds_rs
 
 all_models_2.append({
-    'search': 'random_search',
+    'search': 'randomized_search',
     'candidates': candidates_rs,
     'cv_folds': cv_folds_rs,
     'total_fits': total_fits_rs,
-    'best_params': random_search.best_params_,
-    'best_cv_accuracy': round(random_search.best_score_, 4),
+    'best_params': randomized_search.best_params_,
+    'best_cv_accuracy': round(randomized_search.best_score_, 4),
     'val_f1': round(val_f1_random, 4)
 })
 
@@ -317,4 +317,7 @@ all_models_2.append({
 tuning_df = pd.DataFrame(all_models_2)
 tuning_df.to_csv('outputs/part_c_tuning.csv', index=False)
 print("'outputs/part_c_tuning.csv' saved successfully!\n")
-print(tuning_df)
+
+# Compute the noise share: Sum rf_importance over the is_noise:
+noise_share= score_df.loc[score_df['is_noise'], 'rf_importance'].sum()
+print(f"Noise share of Random Forest importance: {noise_share:.4f}\n")
