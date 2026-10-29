@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import warnings
+import ast
 
 from src.shipment_prep import FEATURES, NOISE_COLUMNS
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
@@ -10,12 +10,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-from scipy.optimize import OptimizeWarning
 from sklearn.feature_selection import SelectKBest, f_classif
 
 
-# Suppress optimization warnings right at the start:
-warnings.simplefilter("ignore", category=OptimizeWarning)
 
 # Reading the data from data folder "modelling_table.csv":
 model_table_df= pd.read_csv("data/modelling_table.csv")
@@ -321,3 +318,42 @@ print("'outputs/part_c_tuning.csv' saved successfully!\n")
 # Compute the noise share: Sum rf_importance over the is_noise:
 noise_share= score_df.loc[score_df['is_noise'], 'rf_importance'].sum()
 print(f"Noise share of Random Forest importance: {noise_share:.4f}\n")
+
+# Loading the tuning results to read:
+tuning_results_df= pd.read_csv('outputs/part_c_tuning.csv')
+
+#Appling tie-breaker priority mapping:
+priority_map= {
+    'default_forest_same_7_features': 1,
+    'grid_search': 2,
+    'randomized_search': 3
+}
+
+tuning_results_df['priority']= tuning_results_df['search'].map(priority_map)
+# Sorting by highest val_f1, then tie-breaker priority:
+tuning_results_df= tuning_results_df.sort_values(
+    by= ['val_f1', 'priority'], 
+    ascending= [False, True]
+    ).reset_index(drop=True)
+
+print("Tuning results sorted by val_f1 (descending) and search priority:\n")    
+
+# Extracting the winner parameter from top ranked row:
+winning_row = tuning_results_df.iloc[0]
+print(f"Winner: {winning_row['search']} with Val F1: {winning_row['val_f1']}\n")
+
+# Parsing best_params safely (if stored as string representation of a dict):
+if winning_row['search'] == 'default_forest_same_7_features':
+    best_params = {'n_estimators': 100, 'min_samples_leaf': 1}
+else:
+    best_params = ast.literal_eval(winning_row['best_params'])
+
+# Building and fitting the final pipeline:
+final_pipeline= Pipeline([
+    ('selector', SelectKBest(score_func=f_classif, k=7)),
+    ('model', RandomForestClassifier(random_state= 42, **best_params))
+])
+
+# Fitting on "X_train and y_train" and prediction on "X_val":
+final_pipeline.fit(X_train, y_train)
+print("Final model pipeline successfully built and fitted on training data!\n")
