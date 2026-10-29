@@ -140,7 +140,6 @@ print("All models successfully trained and evaluated!\n")
 
 # Creating a dataframe:
 models_df= pd.DataFrame(all_models)
-models_df= models_df[['model', 'TN', 'FP', 'FN', 'TP', 'accuracy', 'precision', 'recall', 'f1']]
 
 # Save the file:
 models_df.to_csv('outputs/part_c_models.csv', index= False)
@@ -387,7 +386,6 @@ for t in threshold:
 
 # Creating a dataframe:
 threshold_results_df= pd.DataFrame(threshold_results)
-threshold_results_df= threshold_results_df[['threshold', 'TN', 'FP', 'FN', 'TP', 'accuracy', 'precision', 'recall', 'f1']]
 
 # Save the file:
 threshold_results_df.to_csv('outputs/part_c_thresholds.csv', index= False)
@@ -397,10 +395,61 @@ print("'outputs/part_c_thresholds.csv' saved successfully!\n")
 # Filtering evaluating threshold to find instances where "recall >= 0.80":
 filtered_recall= threshold_results_df[threshold_results_df['recall'] >= 0.80]
 
-# Picking the highest t and if no threshold reaches a recall of 0.80, fallback and select 0.1 as your alert threshold:
+# Picking the highest_threshold and if no threshold reaches a recall of 0.80, fallback and select 0.1 as your alert threshold:
 if not filtered_recall.empty:
   highest_threshold= filtered_recall['threshold'].max()
 else:
   highest_threshold= 0.1
 
-print(f"Selected Optimal Alert Threshold: {highest_threshold}")
+print(f"Selected Optimal Alert Threshold: {highest_threshold}\n")
+
+# Using "predict_proba()" on final fitted model using unseen test features (X_test) and extracting the probabilities corresponding to the positive class:
+test_probs= final_pipeline.predict_proba(X_test)[:, 1]
+
+# Applying the Chosen Threshold:
+# Generating binary test predictions by comparing the test probabilities against optimal alert threshold (t): (test_probs >= optimal_threshold).astype(int):
+test_preds= (test_probs >= highest_threshold).astype(int)
+
+# Computing the confusion matrix using "y_test" and binary test_preds:
+cm= confusion_matrix(y_test, test_preds)
+TN, FP, FN, TP= cm.ravel()
+
+# Computing evaluation metrics:
+test_result= []
+test_result.append({
+    'threshold': highest_threshold,
+    'TN': TN, 'FP': FP, 'FN': FN, 'TP': TP,
+    'accuracy': round(accuracy_score(y_test, test_preds), 4),
+    'precision': round(precision_score(y_test, test_preds, zero_division=0), 4),
+    'recall': round(recall_score(y_test, test_preds, zero_division=0), 4),
+    'f1': round(f1_score(y_test, test_preds, zero_division=0), 4)
+})
+
+# Creating a dataframe:
+final_test_result_df= pd.DataFrame(test_result)
+
+# Save the file:
+final_test_result_df.to_csv('outputs/part_c_final_test.csv', index= False)
+print("'outputs/part_c_final_test.csv' saved successfully!\n")
+
+# Extracting final configuration parameters from the winning model:
+rf_model_step= final_pipeline.named_steps['model']
+n_est= rf_model_step.n_estimators
+max_depth= rf_model_step.max_depth if rf_model_step.max_depth is not None else 'Unlimited'
+min_samples_leaf= rf_model_step.min_samples_leaf
+chosen_source= winning_row['search']                         # From the tuning dataframe winner
+
+final_config_params= []
+final_config_params.append({
+    'selector_k': 7,
+    'n_estimators': n_est,
+    'max_depth': max_depth,
+    'min_samples_leaf': min_samples_leaf,
+    'threshold': highest_threshold,
+    'chosen_from': chosen_source
+})
+
+# Creating a dataframe and save the file:
+final_config_params_df= pd.DataFrame(final_config_params)
+final_config_params_df.to_csv('outputs/part_c_final_config.csv', index= False)
+print("'outputs/part_c_final_config.csv' saved successfully!\n")
