@@ -110,3 +110,77 @@ for k in k_values:
 separation_df= pd.DataFrame(results)
 separation_df.to_csv('outputs/part_d_separation.csv', index=False)
 print("'outputs/part_d_separation.csv' saved successfully!\n")
+
+# Cluster ordering and segment naming:
+# Grouping 'delay_rate' with cluster labels 'k=3' on dataframe "hub_profile_df":
+cluster_col= 'cluster_k3' if 'cluster_k3' in hub_profile_df.columns else 'cluster'           # Asserting the cluster column name based on the existence of 'cluster_k3' in the dataframe.
+
+# Computing mean delay_rate, sorting:
+cluster_delay_means= hub_profile_df.groupby(cluster_col)['delay_rate'].mean()
+cluster_delay_means= cluster_delay_means.sort_values()
+
+# Mapping the "cluster_delay_means" with name("Standard", "Watch", "Escalate"):
+cluster_names= {}
+sorted_cluster_ids= cluster_delay_means.index.tolist()
+if len (sorted_cluster_ids) >= 3:
+  cluster_names[sorted_cluster_ids[0]]= 'Standard'
+  cluster_names[sorted_cluster_ids[1]]= 'Watch'
+  cluster_names[sorted_cluster_ids[2]]= 'Escalate'
+
+# Assigning names to the hub:
+hub_profile_df['segment']= hub_profile_df[cluster_col].map(cluster_names)
+
+# Filtering DataFrame to keep only four specific columns: "hub_id", "segment", "hub_city", and "hub_tier":
+if 'hub_city' not in hub_profile_df.columns or 'hub_tier' not in hub_profile_df.columns:
+  meta_data= modelling_table_df[['hub_id', 'hub_city', 'hub_tier']].drop_duplicates()
+  hub_profile_df= pd.merge(hub_profile_df, meta_data, on= 'hub_id', how= 'left')
+
+segment_df= hub_profile_df[['hub_id', 'segment', 'hub_city', 'hub_tier']]
+
+# Save the file:
+segment_df.to_csv('outputs/hub_segments.csv', index=False)
+print("'outputs/hub_segments.csv' saved successfully!\n")
+
+# Grouping the data by "segment" and computing metrics:
+segment_profile= hub_profile_df.groupby('segment').agg(
+    hubs= ('hub_id', 'count'),
+    mean_delivery_hours= ('mean_delivery_hours', 'mean'),
+    delay_rate= ('delay_rate', 'mean'),
+    mean_distance_km= ('mean_distance_km', 'mean'),
+    mean_n_stops= ('mean_n_stops', 'mean')
+).reset_index()
+
+# Sorting and Rounding the data:
+segment_profile= segment_profile.sort_values(by= 'hubs', ascending= True)
+segment_profile= segment_profile.round({
+    'hubs': 0,
+    'mean_delivery_hours': 4,
+    'delay_rate': 4,
+    'mean_distance_km': 4,
+    'mean_n_stops': 4
+})
+
+# Creating a dataframe and save the file:
+segment_profile_df= pd.DataFrame(segment_profile)
+segment_profile_df.to_csv('outputs/segment_profile.csv', index=False)
+print("'outputs/segment_profile.csv' saved successfully!\n")
+
+# Creating a mapping logic for tiers (Standard= tier 1, Watch= tier 2 and Escalate= tier 3):
+# Creating a copy of a "segment_df":
+segment_df_copy= segment_df.copy()
+
+# Mapping the tiers:
+tier_mapping= {
+    'Standard': 1,
+    'Watch': 2,
+    'Escalate': 3
+}
+segment_df_copy['expected_segment']= segment_df_copy['segment'].map(tier_mapping)
+
+# Filtering for "tier" mismatch in "segment_df_copy":
+mismatch_df= segment_df_copy[hub_profile_df['hub_tier'] != segment_df_copy['expected_segment']]
+mismatch_df= mismatch_df[['hub_id', 'segment', 'hub_city', 'hub_tier',]]
+
+# Save the file:
+mismatch_df.to_csv('outputs/tier_vs_segment_mismatch.csv', index=False)
+print("'outputs/tier_vs_segment_mismatch.csv' saved successfully!\n")
