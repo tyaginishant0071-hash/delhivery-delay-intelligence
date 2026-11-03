@@ -13,7 +13,7 @@
 5. **Declared-value transformation:** The filled `declared_value_inr` values are right-skewed, with a mean of INR 1,533.0542 well above the median of INR 1,121.50; after taking the natural log, the mean (7.0277) and median (7.0224) nearly meet, showing how the transformation compresses the long tail of high values.
 
 ## Model results (regression and classification)
-## Regression
+### Regression
 
 1. **Baseline:** The mean baseline had an R² of −0.0212. Predicting the training average for every shipment performed slightly worse than predicting the validation average, showing that this simple approach underfits because it ignores differences between shipments.
 
@@ -26,7 +26,7 @@
 
 5. **Model choice:** Cross-validation modestly favored gradient boosting, with a mean R² of 0.9353 versus 0.9261 for linear regression—a difference of 0.0092, about twice either model’s fold-to-fold standard deviation. I would still choose linear regression because it had the lower validation RMSE (4.8912 versus 4.9165 hours) and is simpler, while recognizing that gradient boosting may perform slightly better across different data splits.
 
-## Classification
+### Classification
 
 1. **Blind Baseline Model:** The blind baseline achieved 0.7667 accuracy by predicting every parcel would be on time, but its recall was 0.0000 because it missed all 42 delayed parcels; it is therefore useless for proactive delay alerts.
 
@@ -85,15 +85,15 @@ python predict_delay.py
 ## Operations recommendation
 
 Nine hubs are in the Escalate segment. Their average hub-level delay rate is 0.46 (46%), and their mean delivery time is 64.65 hours:
-- HUB13 — Nagpur, Tier 2
-- HUB15 — Kochi, Tier 2
-- HUB17 — Patna, Tier 3
-- HUB18 — Ranchi, Tier 3
-- HUB19 — Guwahati, Tier 3
-- HUB20 — Raipur, Tier 3
-- HUB21 — Bhubaneswar, Tier 3
-- HUB23 — Siliguri, Tier 3
-- HUB24 — Agartala, Tier 3
+- HUB13 — Nagpur, Tier 2, 0.46
+- HUB15 — Kochi, Tier 2, 0.36
+- HUB17 — Patna, Tier 3, 0.46
+- HUB18 — Ranchi, Tier 3, 0.38
+- HUB19 — Guwahati, Tier 3, 0.62
+- HUB20 — Raipur, Tier 3, 0.48
+- HUB21 — Bhubaneswar, Tier 3, 0.40
+- HUB23 — Siliguri, Tier 3, 0.44
+- HUB24 — Agartala, Tier 3, 0.54
 
 Prioritize these hubs for hub-manager review. The segment also has higher average transit distances and stop counts. Managers can investigate whether routes, stops, or local operating conditions contribute to the delays. These patterns suggest where to investigate; they don’t prove the cause.
 
@@ -134,7 +134,7 @@ These are proposed starting triggers, anchored to this project’s results. They
 
 **Share of parcels flagged:** At the chosen threshold, 44 of 180 validation parcels (24.4%) and 45 of 180 test parcels (25.0%) were flagged. Investigate if more than 35% of parcels are flagged in a week.
 
-**Delayed share:** The training delay rate was 23.17%. Monitor the share of late parcels over a rolling four-week window and investigate if it exceeds 30%. A four-week window gives a more stable reading than one week, which has about 93 parcels and a typical fluctuation of roughly 4.4 percentage points. Compare sale-period results with similar sale periods.
+**Delayed share:** The delay rate across the historical data was 23.17%. Monitor the share of late parcels over a rolling four-week window, and investigate if it exceeds 30%. A four-week window gives a more stable reading than a single week. One week holds about 93 parcels, which is an assumption taken from the historical data (1,200 parcels over about 13 weeks), and its delayed share typically fluctuates by roughly 4.4 percentage points by chance. Real weekly volume may differ, which would change how much the weekly share fluctuates. Compare sale-period results with similar sale periods.
 
 **Recall after outcomes are known:** Investigate if recall falls below 0.70 over a sufficiently large review period. This is a proposed early-warning level: test recall was 0.7561, and the brief’s lower bound is 0.55. The test set contained only 41 delayed parcels, so assess recall over a larger rolling group rather than reacting to a small batch.
 
